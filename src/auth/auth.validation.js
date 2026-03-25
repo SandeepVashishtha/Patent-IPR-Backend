@@ -8,7 +8,7 @@ const registerSchema = z.object({
     .preprocess(
       (value) =>
         typeof value === 'string' ? value.trim().toLowerCase() : undefined,
-      z.string().optional()
+      z.enum(['client', 'agent', 'admin']).optional()
     )
     .optional(),
 });

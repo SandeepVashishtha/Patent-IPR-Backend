@@ -24,6 +24,10 @@ app.use(express.json({ limit: '10kb' }));
 app.use(morgan('dev'));
 app.use('/api', apiLimiter);
 
+app.get('/', (req, res) => {
+  res.status(200).send('IPR Backend Running ');
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });

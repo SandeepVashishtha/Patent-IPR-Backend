@@ -6,6 +6,10 @@ const notFound = (req, res, next) => {
 
 const errorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
+  const requestInfo = `${req.method} ${req.originalUrl}`;
+
+  console.error(`[${new Date().toISOString()}] ${requestInfo}`);
+  console.error(err.stack || err);
 
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({ message: 'Invalid token' });

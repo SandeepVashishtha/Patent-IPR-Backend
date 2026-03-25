@@ -9,6 +9,7 @@ const normalizeRegistrationRole = (role) => {
   if (REGISTRABLE_ROLES.includes(role)) {
     return role;
   }
+  // Never allow admin creation via public registration.
   return 'client';
 };
 
@@ -27,7 +28,6 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
-  created_at: user.created_at,
 });
 
 const registerUser = async ({ name, email, password, role }) => {
@@ -43,11 +43,11 @@ const registerUser = async ({ name, email, password, role }) => {
   const result = await db.query(
     `INSERT INTO users (name, email, password, role)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, name, email, role, created_at`,
+     RETURNING id, name, email, role`,
     [name, email, hashedPassword, normalizedRole]
   );
 
-  return result.rows[0];
+  return sanitizeUser(result.rows[0]);
 };
 
 const loginUser = async ({ email, password }) => {
@@ -73,16 +73,13 @@ const loginUser = async ({ email, password }) => {
 };
 
 const getUserById = async (id) => {
-  const result = await db.query(
-    'SELECT id, name, email, role, created_at FROM users WHERE id = $1',
-    [id]
-  );
+  const result = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [id]);
 
   if (result.rows.length === 0) {
     throw new ApiError(404, 'User not found');
   }
 
-  return result.rows[0];
+  return sanitizeUser(result.rows[0]);
 };
 
 module.exports = {

@@ -11,12 +11,20 @@ const options = {
     },
     servers: [
       {
+        url: 'https://express-backend-ajedhzd3h0bfbse5.westindia-01.azurewebsites.net',
+      },
+      {
         url: 'http://localhost:5000',
+      },
+    ],
+    security: [
+      {
+        bearerAuth: [],
       },
     ],
     components: {
       securitySchemes: {
-        BearerAuth: {
+        bearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
@@ -30,7 +38,6 @@ const options = {
             name: { type: 'string' },
             email: { type: 'string', format: 'email' },
             role: { type: 'string', enum: ['client', 'agent', 'admin'] },
-            created_at: { type: 'string', format: 'date-time' },
           },
         },
       },

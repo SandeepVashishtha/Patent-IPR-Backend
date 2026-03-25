@@ -12,6 +12,7 @@ const router = express.Router();
  *   post:
  *     summary: Register a user (client or agent)
  *     tags: [Auth]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -30,8 +31,8 @@ const router = express.Router();
  *                 minLength: 8
  *               role:
  *                 type: string
- *                 enum: [client, agent, admin]
- *                 description: admin will be ignored and defaulted to client
+ *                 enum: [client, agent]
+ *                 description: Optional role; defaults to client. Admin cannot be self-registered.
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -44,6 +45,7 @@ router.post('/register', validate(registerSchema), authController.register);
  *   post:
  *     summary: Login user and receive JWT
  *     tags: [Auth]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -70,7 +72,7 @@ router.post('/login', validate(loginSchema), authController.login);
  *     summary: Get current logged-in user
  *     tags: [Auth]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Authenticated user
@@ -84,7 +86,7 @@ router.get('/me', protect, authController.me);
  *     summary: Admin only protected route example
  *     tags: [Auth]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Admin access granted
