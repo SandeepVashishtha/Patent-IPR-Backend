@@ -1,0 +1,51 @@
+const jwt = require('jsonwebtoken');
+const db = require('../config/db');
+
+const protect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Not authorized, token missing' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'JWT secret is not configured' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const result = await db.query(
+      'SELECT id, name, email, role, created_at FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Not authorized, user not found' });
+    }
+
+    req.user = result.rows[0];
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const authorize = (...allowedRoles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Not authorized' });
+  }
+
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+  }
+
+  return next();
+};
+
+module.exports = {
+  protect,
+  authorize,
+};

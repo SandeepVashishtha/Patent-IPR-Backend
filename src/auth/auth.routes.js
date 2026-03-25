@@ -1,0 +1,96 @@
+const express = require('express');
+const authController = require('./auth.controller');
+const { protect, authorize } = require('./auth.middleware');
+const validate = require('../utils/validate');
+const { registerSchema, loginSchema } = require('./auth.validation');
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a user (client or agent)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               role:
+ *                 type: string
+ *                 enum: [client, agent, admin]
+ *                 description: admin will be ignored and defaulted to client
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ */
+router.post('/register', validate(registerSchema), authController.register);
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user and receive JWT
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+router.post('/login', validate(loginSchema), authController.login);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current logged-in user
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Authenticated user
+ */
+router.get('/me', protect, authController.me);
+
+/**
+ * @swagger
+ * /api/auth/admin-only:
+ *   get:
+ *     summary: Admin only protected route example
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin access granted
+ */
+router.get('/admin-only', protect, authorize('admin'), (req, res) => {
+  res.status(200).json({ message: 'Admin route access granted' });
+});
+
+module.exports = router;
