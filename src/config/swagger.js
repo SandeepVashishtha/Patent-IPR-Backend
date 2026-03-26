@@ -5,10 +5,15 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Express Auth API',
+      title: 'Express Backend API',
       version: '1.0.0',
-      description: 'Authentication and authorization API',
+      description: 'Authentication and patent filing API',
     },
+    tags: [
+      { name: 'Auth', description: 'Authentication and authorization endpoints' },
+      { name: 'Patent Filings', description: 'Patent filing lifecycle endpoints' },
+      { name: 'Files', description: 'File upload and presign endpoints' },
+    ],
     servers: [
       {
         url: 'https://express-backend-ajedhzd3h0bfbse5.westindia-01.azurewebsites.net',
@@ -43,7 +48,7 @@ const options = {
       },
     },
   },
-  apis: [path.join(__dirname, '../auth/*.js')],
+  apis: [path.join(__dirname, '../auth/*.js'), path.join(__dirname, '../patentFilings/*.js')],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
