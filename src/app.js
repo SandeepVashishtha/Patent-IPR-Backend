@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const authRoutes = require('./auth/auth.routes');
 const patentFilingRoutes = require('./patentFilings/patentFiling.routes');
+const nonPatentFilingRoutes = require('./nonPatentFilings/nonPatentFiling.routes');
 const { notFound, errorHandler } = require('./utils/errorHandler');
 
 const app = express();
@@ -35,6 +36,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api', patentFilingRoutes);
+app.use('/api', nonPatentFilingRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(notFound);

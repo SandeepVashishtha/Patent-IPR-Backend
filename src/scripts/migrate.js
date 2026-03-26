@@ -25,6 +25,15 @@ const migrate = async () => {
     `);
 
     await db.query(`
+      DO $$
+      BEGIN
+        CREATE TYPE non_patent_filing_type AS ENUM ('TRADEMARK', 'COPYRIGHT', 'DESIGN');
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+
+    await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(120) NOT NULL,
@@ -74,6 +83,40 @@ const migrate = async () => {
     );
     await db.query(
       'CREATE INDEX IF NOT EXISTS idx_patent_filings_submitted_at ON patent_filings(submitted_at DESC)'
+    );
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS non_patent_filings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        filing_type non_patent_filing_type NOT NULL,
+        reference_number VARCHAR(32) UNIQUE NOT NULL,
+        filing_identifier VARCHAR(32) UNIQUE NOT NULL,
+        filing_year INTEGER NOT NULL,
+        yearly_sequence INTEGER NOT NULL,
+        sequence_number BIGINT NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        document_url TEXT,
+        status filing_status NOT NULL DEFAULT 'DRAFT',
+        submitted_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_non_patent_year_seq UNIQUE (filing_type, filing_year, yearly_sequence),
+        CONSTRAINT uq_non_patent_type_sequence UNIQUE (filing_type, sequence_number)
+      );
+    `);
+
+    await db.query(
+      'CREATE INDEX IF NOT EXISTS idx_non_patent_filings_user_created_at ON non_patent_filings(user_id, created_at DESC)'
+    );
+    await db.query(
+      'CREATE INDEX IF NOT EXISTS idx_non_patent_filings_user_status ON non_patent_filings(user_id, status)'
+    );
+    await db.query(
+      'CREATE INDEX IF NOT EXISTS idx_non_patent_filings_reference_number ON non_patent_filings(reference_number)'
+    );
+    await db.query(
+      'CREATE INDEX IF NOT EXISTS idx_non_patent_filings_type_submitted_at ON non_patent_filings(filing_type, submitted_at DESC)'
     );
 
     console.log('Migration completed successfully.');
