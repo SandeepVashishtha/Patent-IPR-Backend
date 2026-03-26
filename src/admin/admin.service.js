@@ -5,16 +5,15 @@ const DEFAULT_SORT = 'submitted_at DESC';
 
 const normalizeFiling = (row) => ({
   id: row.id,
-  filingType: row.filing_type,
+  type: row.filing_type === 'PATENT' ? 'patent' : 'nonPatent',
   title: row.title,
   referenceNumber: row.reference_number,
-  identifier: row.identifier,
   status: row.status,
-  agentId: row.agent_id,
-  assignedAt: row.assigned_at,
+  applicantName: row.applicant_name || 'N/A',
+  assignedAgentId: row.assigned_agent_id,
+  assignedAgentName: row.assigned_agent_name,
   submittedAt: row.submitted_at,
   updatedAt: row.updated_at,
-  createdAt: row.created_at,
 });
 
 const buildListQuery = ({ query }) => {
@@ -29,7 +28,7 @@ const buildListQuery = ({ query }) => {
   }
 
   if (query.unassigned) {
-    conditions.push('combined.agent_id IS NULL');
+    conditions.push('combined.assigned_agent_id IS NULL');
   }
 
   if (query.type === 'patent') {
@@ -52,7 +51,9 @@ const buildListQuery = ({ query }) => {
       reference_number,
       patent_id AS identifier,
       status,
-      agent_id,
+      COALESCE(applicant_name, applicant_email, 'N/A') AS applicant_name,
+      assigned_agent_id,
+      assigned_agent_name,
       assigned_at,
       submitted_at,
       updated_at,
@@ -68,7 +69,9 @@ const buildListQuery = ({ query }) => {
       reference_number,
       filing_identifier AS identifier,
       status,
-      agent_id,
+      COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+      assigned_agent_id,
+      assigned_agent_name,
       assigned_at,
       submitted_at,
       updated_at,
@@ -139,6 +142,8 @@ const updatePatentAssignment = async ({ filingId, agentId }) => {
     `
       UPDATE patent_filings
       SET agent_id = $2,
+      SET assigned_agent_id = $2,
+          assigned_agent_name = (SELECT name FROM users WHERE id = $2),
           assigned_at = NOW(),
           status = CASE
             WHEN status = 'PENDING' THEN 'ASSIGNED'
@@ -153,7 +158,9 @@ const updatePatentAssignment = async ({ filingId, agentId }) => {
         reference_number,
         patent_id AS identifier,
         status,
-        agent_id,
+        COALESCE(applicant_name, applicant_email, 'N/A') AS applicant_name,
+        assigned_agent_id,
+        assigned_agent_name,
         assigned_at,
         submitted_at,
         updated_at,
@@ -170,6 +177,8 @@ const updateNonPatentAssignment = async ({ filingId, agentId }) => {
     `
       UPDATE non_patent_filings
       SET agent_id = $2,
+      SET assigned_agent_id = $2,
+          assigned_agent_name = (SELECT name FROM users WHERE id = $2),
           assigned_at = NOW(),
           status = CASE
             WHEN status = 'PENDING' THEN 'ASSIGNED'
@@ -184,7 +193,9 @@ const updateNonPatentAssignment = async ({ filingId, agentId }) => {
         reference_number,
         filing_identifier AS identifier,
         status,
-        agent_id,
+        COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+        assigned_agent_id,
+        assigned_agent_name,
         assigned_at,
         submitted_at,
         updated_at,
@@ -209,12 +220,20 @@ const assignAgentToFiling = async ({ filingId, agentId }) => {
 
   const patentUpdated = await updatePatentAssignment({ filingId, agentId });
   if (patentUpdated) {
-    return normalizeFiling(patentUpdated);
+    return {
+      id: patentUpdated.id,
+      assignedAgentId: patentUpdated.assigned_agent_id,
+      status: patentUpdated.status,
+    };
   }
 
   const nonPatentUpdated = await updateNonPatentAssignment({ filingId, agentId });
   if (nonPatentUpdated) {
-    return normalizeFiling(nonPatentUpdated);
+    return {
+      id: nonPatentUpdated.id,
+      assignedAgentId: nonPatentUpdated.assigned_agent_id,
+      status: nonPatentUpdated.status,
+    };
   }
 
   throw new ApiError(404, 'Filing not found', null, 'NOT_FOUND');
@@ -234,7 +253,9 @@ const setFilingDecision = async ({ filingId, status }) => {
         reference_number,
         patent_id AS identifier,
         status,
-        agent_id,
+        COALESCE(applicant_name, applicant_email, 'N/A') AS applicant_name,
+        assigned_agent_id,
+        assigned_agent_name,
         assigned_at,
         submitted_at,
         updated_at,
@@ -244,7 +265,11 @@ const setFilingDecision = async ({ filingId, status }) => {
   );
 
   if (patentUpdateResult.rows.length > 0) {
-    return normalizeFiling(patentUpdateResult.rows[0]);
+    return {
+      id: patentUpdateResult.rows[0].id,
+      status: patentUpdateResult.rows[0].status,
+      updatedAt: patentUpdateResult.rows[0].updated_at,
+    };
   }
 
   const nonPatentUpdateResult = await db.query(
@@ -260,7 +285,9 @@ const setFilingDecision = async ({ filingId, status }) => {
         reference_number,
         filing_identifier AS identifier,
         status,
-        agent_id,
+        COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+        assigned_agent_id,
+        assigned_agent_name,
         assigned_at,
         submitted_at,
         updated_at,
@@ -270,7 +297,11 @@ const setFilingDecision = async ({ filingId, status }) => {
   );
 
   if (nonPatentUpdateResult.rows.length > 0) {
-    return normalizeFiling(nonPatentUpdateResult.rows[0]);
+    return {
+      id: nonPatentUpdateResult.rows[0].id,
+      status: nonPatentUpdateResult.rows[0].status,
+      updatedAt: nonPatentUpdateResult.rows[0].updated_at,
+    };
   }
 
   throw new ApiError(404, 'Filing not found', null, 'NOT_FOUND');
@@ -283,14 +314,29 @@ const listAgents = async () => {
         id,
         name,
         email,
-        role
+        (
+          SELECT COUNT(*)::int
+          FROM patent_filings pf
+          WHERE pf.assigned_agent_id = users.id
+            AND pf.status IN ('ASSIGNED', 'IN_PROGRESS')
+        ) + (
+          SELECT COUNT(*)::int
+          FROM non_patent_filings npf
+          WHERE npf.assigned_agent_id = users.id
+            AND npf.status IN ('ASSIGNED', 'IN_PROGRESS')
+        ) AS active_assignments
       FROM users
       WHERE role = 'agent'
       ORDER BY name ASC
     `
   );
 
-  return result.rows;
+  return result.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    activeAssignments: row.active_assignments,
+  }));
 };
 
 module.exports = {

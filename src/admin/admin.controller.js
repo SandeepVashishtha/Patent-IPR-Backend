@@ -13,7 +13,7 @@ const assignAgentToFiling = asyncHandler(async (req, res) => {
     filingId: req.params.id,
     agentId: req.body.agentId,
   });
-  res.status(200).json({ data });
+  res.status(200).json({ message: 'Filing assigned to agent', data });
 });
 
 const reassignAgentToFiling = asyncHandler(async (req, res) => {
@@ -21,7 +21,7 @@ const reassignAgentToFiling = asyncHandler(async (req, res) => {
     filingId: req.params.id,
     agentId: req.body.agentId,
   });
-  res.status(200).json({ data });
+  res.status(200).json({ message: 'Filing reassigned', data });
 });
 
 const setFilingDecision = asyncHandler(async (req, res) => {
@@ -29,7 +29,7 @@ const setFilingDecision = asyncHandler(async (req, res) => {
     filingId: req.params.id,
     status: req.body.status,
   });
-  res.status(200).json({ data });
+  res.status(200).json({ message: 'Filing status updated', data });
 });
 
 const listAgents = asyncHandler(async (req, res) => {
