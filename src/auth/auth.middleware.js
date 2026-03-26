@@ -6,13 +6,15 @@ const protect = async (req, res, next) => {
     const authHeader = req.headers.authorization || '';
 
     if (!authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Not authorized, token missing' });
+      return res
+        .status(401)
+        .json({ message: 'Not authorized, token missing', code: 'UNAUTHORIZED' });
     }
 
     const token = authHeader.split(' ')[1];
 
     if (!process.env.JWT_SECRET) {
-      return res.status(500).json({ message: 'JWT secret is not configured' });
+      return res.status(500).json({ message: 'JWT secret is not configured', code: 'INTERNAL_ERROR' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -22,7 +24,9 @@ const protect = async (req, res, next) => {
     ]);
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Not authorized, user not found' });
+      return res
+        .status(401)
+        .json({ message: 'Not authorized, user not found', code: 'UNAUTHORIZED' });
     }
 
     req.user = result.rows[0];
@@ -34,11 +38,13 @@ const protect = async (req, res, next) => {
 
 const authorize = (...allowedRoles) => (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Not authorized' });
+    return res.status(401).json({ message: 'Not authorized', code: 'UNAUTHORIZED' });
   }
 
   if (!allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    return res
+      .status(403)
+      .json({ message: 'Forbidden: insufficient permissions', code: 'FORBIDDEN' });
   }
 
   return next();

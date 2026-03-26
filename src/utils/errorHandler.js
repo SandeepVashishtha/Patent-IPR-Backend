@@ -12,23 +12,52 @@ const errorHandler = (err, req, res, next) => {
   console.error(err.stack || err);
 
   if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token', code: 'UNAUTHORIZED' });
   }
 
   if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({ message: 'Token expired' });
+    return res.status(401).json({ message: 'Token expired', code: 'UNAUTHORIZED' });
   }
 
   if (err.code === '23505') {
-    return res.status(409).json({ message: 'A record with this value already exists' });
+    return res.status(409).json({
+      message: 'A record with this value already exists',
+      code: 'CONFLICT',
+    });
+  }
+
+  if (err.code === '22P02') {
+    return res.status(400).json({
+      message: 'Invalid request parameter format',
+      code: 'BAD_REQUEST',
+    });
   }
 
   const response = {
     message: err.message || 'Internal Server Error',
   };
 
-  if (err instanceof ApiError && err.details) {
-    response.details = err.details;
+  const errors = err.errors || err.details;
+  if (errors) {
+    response.errors = errors;
+  }
+
+  if (err.code && !/^\d/.test(err.code)) {
+    response.code = err.code;
+  } else if (statusCode === 400) {
+    response.code = 'BAD_REQUEST';
+  } else if (statusCode === 401) {
+    response.code = 'UNAUTHORIZED';
+  } else if (statusCode === 403) {
+    response.code = 'FORBIDDEN';
+  } else if (statusCode === 404) {
+    response.code = 'NOT_FOUND';
+  } else if (statusCode === 409) {
+    response.code = 'CONFLICT';
+  } else if (statusCode === 422) {
+    response.code = 'VALIDATION_ERROR';
+  } else if (statusCode >= 500) {
+    response.code = 'INTERNAL_ERROR';
   }
 
   if (process.env.NODE_ENV !== 'production' && statusCode === 500) {
