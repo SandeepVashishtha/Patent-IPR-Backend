@@ -14,6 +14,7 @@ const options = {
       { name: 'Patent Filings', description: 'Patent filing lifecycle endpoints' },
       { name: 'Non-Patent Filings', description: 'Trademark, copyright and design filing endpoints' },
       { name: 'Files', description: 'File upload and presign endpoints' },
+      { name: 'System', description: 'System and health endpoints' },
     ],
     servers: [
       {
@@ -46,10 +47,39 @@ const options = {
             role: { type: 'string', enum: ['client', 'agent', 'admin'] },
           },
         },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            code: { type: 'string' },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  field: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+          required: ['message'],
+        },
+        Pageable: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer' },
+            size: { type: 'integer' },
+            totalElements: { type: 'integer' },
+            totalPages: { type: 'integer' },
+          },
+          required: ['page', 'size', 'totalElements', 'totalPages'],
+        },
       },
     },
   },
   apis: [
+    path.join(__dirname, '../app.js'),
     path.join(__dirname, '../auth/*.js'),
     path.join(__dirname, '../patentFilings/*.js'),
     path.join(__dirname, '../nonPatentFilings/*.js'),

@@ -26,10 +26,40 @@ app.use(express.json({ limit: '10kb' }));
 app.use(morgan('dev'));
 app.use('/api', apiLimiter);
 
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Root status endpoint
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Service is running
+ */
 app.get('/', (req, res) => {
   res.status(200).send('IPR Backend Running ');
 });
 
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ */
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
