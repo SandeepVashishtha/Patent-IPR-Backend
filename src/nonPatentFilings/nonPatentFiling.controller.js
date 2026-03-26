@@ -1,7 +1,9 @@
 const asyncHandler = require('../utils/asyncHandler');
 const nonPatentFilingService = require('./nonPatentFiling.service');
 const { NON_PATENT_TYPE_CONFIG } = require('./nonPatentFiling.constants');
+const ApiError = require('../utils/apiError');
 const { parseListFilingsQuery } = require('./nonPatentFiling.validation');
+const { NON_PATENT_TYPES } = require('./nonPatentFiling.constants');
 
 const buildSummaryResponse = (filingType, filing) => {
   const config = NON_PATENT_TYPE_CONFIG[filingType];
@@ -84,6 +86,58 @@ const buildNonPatentFilingController = (filingType) => {
   };
 };
 
+const parseOptionalFilingType = (value) => {
+  if (value === undefined || value === null || String(value).trim().length === 0) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim().toUpperCase();
+  const validValues = Object.values(NON_PATENT_TYPES);
+
+  if (!validValues.includes(normalized)) {
+    throw new ApiError(
+      422,
+      'Validation failed',
+      [
+        {
+          field: 'type',
+          message: `type must be one of ${validValues.join(', ')}`,
+        },
+      ],
+      'VALIDATION_ERROR'
+    );
+  }
+
+  return normalized;
+};
+
+const listAllNonPatentFilings = asyncHandler(async (req, res) => {
+  const query = parseListFilingsQuery(req.query);
+  const filingType = parseOptionalFilingType(req.query.type);
+
+  const data = await nonPatentFilingService.listNonPatentFilings({
+    user: req.user,
+    query,
+    filingType,
+  });
+
+  res.status(200).json({ data });
+});
+
+const getAnyNonPatentFilingByReference = asyncHandler(async (req, res) => {
+  const filingType = parseOptionalFilingType(req.query.type);
+
+  const data = await nonPatentFilingService.getNonPatentFilingByReference({
+    user: req.user,
+    referenceNumber: req.params.referenceNumber,
+    filingType,
+  });
+
+  res.status(200).json({ data });
+});
+
 module.exports = {
   buildNonPatentFilingController,
+  listAllNonPatentFilings,
+  getAnyNonPatentFilingByReference,
 };

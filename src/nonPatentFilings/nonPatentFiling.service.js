@@ -242,15 +242,19 @@ const parseSort = (sort) => {
 };
 
 const listNonPatentFilings = async ({ user, query, filingType }) => {
-  assertFilingTypeSupported(filingType);
+  if (filingType) {
+    assertFilingTypeSupported(filingType);
+  }
 
   const whereParts = [];
   const values = [];
   let index = 1;
 
-  whereParts.push(`filing_type = $${index}`);
-  values.push(filingType);
-  index += 1;
+  if (filingType) {
+    whereParts.push(`filing_type = $${index}`);
+    values.push(filingType);
+    index += 1;
+  }
 
   if (user.role === 'client') {
     whereParts.push(`user_id = $${index}`);
@@ -264,7 +268,7 @@ const listNonPatentFilings = async ({ user, query, filingType }) => {
     index += 1;
   }
 
-  const whereClause = `WHERE ${whereParts.join(' AND ')}`;
+  const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
   const sortClause = parseSort(query.sort);
   const offset = query.page * query.size;
 
@@ -299,14 +303,22 @@ const listNonPatentFilings = async ({ user, query, filingType }) => {
 };
 
 const getNonPatentFilingByReference = async ({ user, referenceNumber, filingType }) => {
-  assertFilingTypeSupported(filingType);
+  if (filingType) {
+    assertFilingTypeSupported(filingType);
+  }
 
-  const result = await db.query(
-    `${selectClause} WHERE reference_number = $1 AND filing_type = $2`,
-    [referenceNumber, filingType]
-  );
+  const result = filingType
+    ? await db.query(
+        `${selectClause} WHERE reference_number = $1 AND filing_type = $2`,
+        [referenceNumber, filingType]
+      )
+    : await db.query(`${selectClause} WHERE reference_number = $1`, [referenceNumber]);
+
   if (result.rows.length === 0) {
-    throw new ApiError(404, `${NON_PATENT_TYPE_CONFIG[filingType].label} not found`, null, 'NOT_FOUND');
+    const message = filingType
+      ? `${NON_PATENT_TYPE_CONFIG[filingType].label} not found`
+      : 'Non-patent filing not found';
+    throw new ApiError(404, message, null, 'NOT_FOUND');
   }
 
   const filing = result.rows[0];

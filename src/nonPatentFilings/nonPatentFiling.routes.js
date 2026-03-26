@@ -2,7 +2,11 @@ const express = require('express');
 const validate = require('../utils/validate');
 const { protect } = require('../auth/auth.middleware');
 const { NON_PATENT_TYPES } = require('./nonPatentFiling.constants');
-const { buildNonPatentFilingController } = require('./nonPatentFiling.controller');
+const {
+  buildNonPatentFilingController,
+  listAllNonPatentFilings,
+  getAnyNonPatentFilingByReference,
+} = require('./nonPatentFiling.controller');
 const {
   getCreateFilingSchema,
   getUpdateFilingSchema,
@@ -12,6 +16,75 @@ const {
 const router = express.Router();
 
 router.use(protect);
+
+/**
+ * @swagger
+ * /api/non-patent-filings:
+ *   get:
+ *     summary: List all non-patent filings (optional type filter)
+ *     tags: [Non-Patent Filings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [TRADEMARK, COPYRIGHT, DESIGN]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           default: submittedAt,desc
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, PENDING, APPROVED, REJECTED]
+ *     responses:
+ *       200:
+ *         description: Paginated filing list
+ *       422:
+ *         description: Query validation failed
+ */
+router.get('/non-patent-filings', listAllNonPatentFilings);
+
+/**
+ * @swagger
+ * /api/non-patent-filings/{referenceNumber}:
+ *   get:
+ *     summary: Get a non-patent filing by reference number (optional type filter)
+ *     tags: [Non-Patent Filings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: referenceNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [TRADEMARK, COPYRIGHT, DESIGN]
+ *     responses:
+ *       200:
+ *         description: Filing detail
+ *       404:
+ *         description: Filing not found
+ */
+router.get('/non-patent-filings/:referenceNumber', getAnyNonPatentFilingByReference);
 
 const trademarkController = buildNonPatentFilingController(NON_PATENT_TYPES.TRADEMARK);
 const copyrightController = buildNonPatentFilingController(NON_PATENT_TYPES.COPYRIGHT);

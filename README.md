@@ -19,4 +19,10 @@
 - GET `/api/auth/me` (protected)
 - GET `/api/auth/admin-only` (admin protected)
 
+Non-patent filing contract: `non-patent-filing-api.md`
+
+Non-patent filings (generic GET):
+- GET `/api/non-patent-filings`
+- GET `/api/non-patent-filings/:referenceNumber`
+
 Swagger docs: `http://localhost:5000/api-docs`
