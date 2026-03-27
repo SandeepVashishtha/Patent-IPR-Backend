@@ -2,7 +2,7 @@ const { z } = require('zod');
 const ApiError = require('../utils/apiError');
 
 const ALLOWED_ADMIN_STATUSES = ['APPROVED', 'REJECTED'];
-const LIST_STATUSES = ['DRAFT', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'APPROVED', 'REJECTED'];
+const LIST_STATUSES = ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'];
 const FILING_TYPES = ['patent', 'nonPatent'];
 
 const emptyToUndefined = (value) => {

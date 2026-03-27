@@ -10,6 +10,46 @@ router.use(protect, authorize('admin'));
 
 /**
  * @swagger
+ * /api/admin/dashboard:
+ *   get:
+ *     summary: Get admin dashboard metrics and filings table data
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, PENDING, APPROVED, REJECTED]
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [patent, nonPatent]
+ *       - in: query
+ *         name: unassigned
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *     responses:
+ *       200:
+ *         description: Dashboard metrics with paginated filings list
+ */
+router.get('/admin/dashboard', adminController.getAdminDashboard);
+
+/**
+ * @swagger
  * /api/admin/filings:
  *   get:
  *     summary: List all filings for admin monitoring
@@ -31,7 +71,7 @@ router.use(protect, authorize('admin'));
  *         name: status
  *         schema:
  *           type: string
- *           enum: [DRAFT, PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, APPROVED, REJECTED]
+ *           enum: [DRAFT, PENDING, APPROVED, REJECTED]
  *       - in: query
  *         name: type
  *         schema:
@@ -47,6 +87,101 @@ router.use(protect, authorize('admin'));
  *         description: Paginated filings list
  */
 router.get('/admin/filings', adminController.listAdminFilings);
+
+/**
+ * @swagger
+ * /api/admin/unassigned:
+ *   get:
+ *     summary: List unassigned active filings for quick assignment
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [patent, nonPatent]
+ *     responses:
+ *       200:
+ *         description: Paginated unassigned filings list
+ */
+router.get('/admin/unassigned', adminController.listUnassignedFilings);
+
+/**
+ * @swagger
+ * /api/admin/assignments:
+ *   get:
+ *     summary: List assigned active filings for assignment management
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [patent, nonPatent]
+ *     responses:
+ *       200:
+ *         description: Paginated assigned filings list
+ */
+router.get('/admin/assignments', adminController.listAssignments);
+
+/**
+ * @swagger
+ * /api/admin/decisions:
+ *   get:
+ *     summary: List decided filings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [APPROVED, REJECTED]
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [patent, nonPatent]
+ *     responses:
+ *       200:
+ *         description: Paginated decided filings list
+ */
+router.get('/admin/decisions', adminController.listDecisions);
 
 /**
  * @swagger
@@ -198,5 +333,21 @@ router.get('/admin/agents', adminController.listAgents);
  *         description: Client users list
  */
 router.get('/admin/clients', adminController.listClients);
+
+/**
+ * @swagger
+ * /api/admin/profile:
+ *   get:
+ *     summary: Get profile and summary details of logged-in admin
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin profile with summary counters
+ *       404:
+ *         description: Admin not found
+ */
+router.get('/admin/profile', adminController.getAdminProfile);
 
 module.exports = router;

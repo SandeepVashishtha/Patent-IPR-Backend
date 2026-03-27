@@ -2,6 +2,10 @@ const db = require('../config/db');
 const ApiError = require('../utils/apiError');
 
 const DEFAULT_SORT = 'submitted_at DESC';
+const NON_PATENT_TITLE_SQL = "COALESCE(payload->>'title', payload->>'trademarkName', payload->>'titleOfWork', payload->>'articleName', 'N/A')";
+const NON_PATENT_APPLICANT_SQL = "COALESCE(payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A')";
+const ACTIVE_STATUSES = ['DRAFT', 'PENDING'];
+const DECIDED_STATUSES = ['APPROVED', 'REJECTED'];
 
 const normalizeFiling = (row) => ({
   id: row.id,
@@ -16,9 +20,9 @@ const normalizeFiling = (row) => ({
   updatedAt: row.updated_at,
 });
 
-const buildListQuery = ({ query }) => {
+const buildListQuery = ({ query, fixedConditions = [] }) => {
   const values = [];
-  const conditions = [];
+  const conditions = [...fixedConditions];
   let index = 1;
 
   if (query.status) {
@@ -65,11 +69,11 @@ const buildListQuery = ({ query }) => {
     SELECT
       id,
       filing_type,
-      COALESCE(payload->>'title', payload->>'trademarkName', payload->>'workTitle', payload->>'designTitle', 'N/A') AS title,
+      ${NON_PATENT_TITLE_SQL} AS title,
       reference_number,
       filing_identifier AS identifier,
       status,
-      COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+      ${NON_PATENT_APPLICANT_SQL} AS applicant_name,
       assigned_agent_id,
       agent_name,
       assigned_at,
@@ -102,8 +106,8 @@ const buildListQuery = ({ query }) => {
   };
 };
 
-const listFilings = async ({ query }) => {
-  const sql = buildListQuery({ query });
+const listFilingsWithConditions = async ({ query, fixedConditions = [] }) => {
+  const sql = buildListQuery({ query, fixedConditions });
 
   const [countResult, listResult] = await Promise.all([
     db.query(sql.countSql, sql.values),
@@ -120,6 +124,136 @@ const listFilings = async ({ query }) => {
       size: query.size,
       totalElements,
       totalPages,
+    },
+  };
+};
+
+const listFilings = async ({ query }) => listFilingsWithConditions({ query, fixedConditions: [] });
+
+const listUnassignedFilings = async ({ query }) => {
+  const fixedConditions = [
+    'combined.assigned_agent_id IS NULL',
+    `combined.status IN ('${ACTIVE_STATUSES[0]}', '${ACTIVE_STATUSES[1]}')`,
+  ];
+  return listFilingsWithConditions({ query, fixedConditions });
+};
+
+const listAssignments = async ({ query }) => {
+  const fixedConditions = [
+    'combined.assigned_agent_id IS NOT NULL',
+    `combined.status IN ('${ACTIVE_STATUSES[0]}', '${ACTIVE_STATUSES[1]}')`,
+  ];
+  return listFilingsWithConditions({ query, fixedConditions });
+};
+
+const listDecisions = async ({ query }) => {
+  const fixedConditions = [
+    `combined.status IN ('${DECIDED_STATUSES[0]}', '${DECIDED_STATUSES[1]}')`,
+  ];
+  return listFilingsWithConditions({ query, fixedConditions });
+};
+
+const getDashboard = async ({ query }) => {
+  const statsResult = await db.query(
+    `
+      SELECT
+        COUNT(*)::int AS total_filings,
+        COUNT(*) FILTER (
+          WHERE assigned_agent_id IS NULL
+            AND status IN ('${ACTIVE_STATUSES[0]}', '${ACTIVE_STATUSES[1]}')
+        )::int AS unassigned,
+        COUNT(*) FILTER (
+          WHERE assigned_agent_id IS NOT NULL
+            AND status IN ('${ACTIVE_STATUSES[0]}', '${ACTIVE_STATUSES[1]}')
+        )::int AS in_progress,
+        COUNT(*) FILTER (
+          WHERE status IN ('${DECIDED_STATUSES[0]}', '${DECIDED_STATUSES[1]}')
+        )::int AS decided
+      FROM (
+        SELECT status, assigned_agent_id FROM patent_filings
+        UNION ALL
+        SELECT status, assigned_agent_id FROM non_patent_filings
+      ) AS combined
+    `
+  );
+
+  const filings = await listFilings({ query });
+  const stats = statsResult.rows[0];
+
+  return {
+    stats: {
+      totalFilings: stats.total_filings,
+      unassigned: stats.unassigned,
+      inProgress: stats.in_progress,
+      decided: stats.decided,
+    },
+    filings,
+  };
+};
+
+const getAdminProfile = async ({ userId }) => {
+  const profileResult = await db.query(
+    `
+      SELECT id, name, email, role, created_at
+      FROM users
+      WHERE id = $1 AND role = 'admin'
+    `,
+    [userId]
+  );
+
+  if (profileResult.rows.length === 0) {
+    throw new ApiError(404, 'Admin not found', null, 'NOT_FOUND');
+  }
+
+  const summaryResult = await db.query(
+    `
+      SELECT
+        (SELECT COUNT(*)::int FROM users WHERE role = 'agent') AS total_agents,
+        (SELECT COUNT(*)::int FROM users WHERE role = 'client') AS total_clients,
+        (
+          SELECT COUNT(*)::int
+          FROM (
+            SELECT status FROM patent_filings
+            UNION ALL
+            SELECT status FROM non_patent_filings
+          ) AS all_filings
+        ) AS total_filings,
+        (
+          SELECT COUNT(*)::int
+          FROM (
+            SELECT status FROM patent_filings
+            UNION ALL
+            SELECT status FROM non_patent_filings
+          ) AS all_filings
+          WHERE status IN ('${ACTIVE_STATUSES[0]}', '${ACTIVE_STATUSES[1]}')
+        ) AS active_filings,
+        (
+          SELECT COUNT(*)::int
+          FROM (
+            SELECT status FROM patent_filings
+            UNION ALL
+            SELECT status FROM non_patent_filings
+          ) AS all_filings
+          WHERE status IN ('${DECIDED_STATUSES[0]}', '${DECIDED_STATUSES[1]}')
+        ) AS decided_filings
+    `
+  );
+
+  const profile = profileResult.rows[0];
+  const summary = summaryResult.rows[0];
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    role: profile.role,
+    createdAt: profile.created_at,
+    summary: {
+      totalAgents: summary.total_agents,
+      totalClients: summary.total_clients,
+      totalFilings: summary.total_filings,
+      activeFilings: summary.active_filings,
+      decidedFilings: summary.decided_filings,
     },
   };
 };
@@ -144,10 +278,6 @@ const updatePatentAssignment = async ({ filingId, agentId }) => {
       SET assigned_agent_id = $2,
           agent_name = (SELECT name FROM users WHERE id = $2),
           assigned_at = NOW(),
-          status = CASE
-            WHEN status = 'PENDING' THEN 'ASSIGNED'
-            ELSE status
-          END,
           updated_at = NOW()
       WHERE id = $1
       RETURNING
@@ -178,20 +308,16 @@ const updateNonPatentAssignment = async ({ filingId, agentId }) => {
       SET assigned_agent_id = $2,
           agent_name = (SELECT name FROM users WHERE id = $2),
           assigned_at = NOW(),
-          status = CASE
-            WHEN status = 'PENDING' THEN 'ASSIGNED'
-            ELSE status
-          END,
           updated_at = NOW()
       WHERE id = $1
       RETURNING
         id,
         filing_type,
-        COALESCE(payload->>'title', payload->>'trademarkName', payload->>'workTitle', payload->>'designTitle', 'N/A') AS title,
+        ${NON_PATENT_TITLE_SQL} AS title,
         reference_number,
         filing_identifier AS identifier,
         status,
-        COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+        ${NON_PATENT_APPLICANT_SQL} AS applicant_name,
         assigned_agent_id,
         agent_name,
         assigned_at,
@@ -279,11 +405,11 @@ const setFilingDecision = async ({ filingId, status }) => {
       RETURNING
         id,
         filing_type,
-        COALESCE(payload->>'title', payload->>'trademarkName', payload->>'workTitle', payload->>'designTitle', 'N/A') AS title,
+        ${NON_PATENT_TITLE_SQL} AS title,
         reference_number,
         filing_identifier AS identifier,
         status,
-        COALESCE(applicant_name, payload->>'applicantName', payload->>'applicant', payload->>'fullName', payload->>'name', 'N/A') AS applicant_name,
+        ${NON_PATENT_APPLICANT_SQL} AS applicant_name,
         assigned_agent_id,
         agent_name,
         assigned_at,
@@ -316,12 +442,12 @@ const listAgents = async () => {
           SELECT COUNT(*)::int
           FROM patent_filings pf
           WHERE pf.assigned_agent_id = users.id
-            AND pf.status IN ('ASSIGNED', 'IN_PROGRESS')
+            AND pf.status IN ('DRAFT', 'PENDING')
         ) + (
           SELECT COUNT(*)::int
           FROM non_patent_filings npf
           WHERE npf.assigned_agent_id = users.id
-            AND npf.status IN ('ASSIGNED', 'IN_PROGRESS')
+            AND npf.status IN ('DRAFT', 'PENDING')
         ) AS active_assignments
       FROM users
       WHERE role = 'agent'
@@ -357,9 +483,14 @@ const listClients = async () => {
 };
 
 module.exports = {
+  getDashboard,
   listFilings,
+  listUnassignedFilings,
+  listAssignments,
+  listDecisions,
   assignAgentToFiling,
   setFilingDecision,
+  getAdminProfile,
   listAgents,
   listClients,
 };
