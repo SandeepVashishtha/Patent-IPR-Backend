@@ -18,7 +18,6 @@ Auth:
 - POST `/api/auth/register`
 - POST `/api/auth/login`
 - GET `/api/auth/me` (protected)
-- GET `/api/auth/admin-only` (admin protected)
 
 Swagger docs: `http://localhost:5000/api-docs`
 

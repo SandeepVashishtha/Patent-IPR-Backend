@@ -1,6 +1,6 @@
 const express = require('express');
 const authController = require('./auth.controller');
-const { protect, authorize } = require('./auth.middleware');
+const { protect } = require('./auth.middleware');
 const validate = require('../utils/validate');
 const { registerSchema, loginSchema } = require('./auth.validation');
 
@@ -78,21 +78,5 @@ router.post('/login', validate(loginSchema), authController.login);
  *         description: Authenticated user
  */
 router.get('/me', protect, authController.me);
-
-/**
- * @swagger
- * /api/auth/admin-only:
- *   get:
- *     summary: Admin only protected route example
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Admin access granted
- */
-router.get('/admin-only', protect, authorize('admin'), (req, res) => {
-  res.status(200).json({ message: 'Admin route access granted' });
-});
 
 module.exports = router;

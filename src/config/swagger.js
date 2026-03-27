@@ -11,7 +11,6 @@ const options = {
     },
     tags: [
       { name: 'Auth', description: 'Authentication and authorization endpoints' },
-      { name: 'Admin', description: 'Admin assignment, monitoring and decision endpoints' },
       { name: 'Patent Filings', description: 'Patent filing lifecycle endpoints' },
       { name: 'Non-Patent Filings', description: 'Trademark, copyright and design filing endpoints' },
       { name: 'Files', description: 'File upload and presign endpoints' },
@@ -82,7 +81,6 @@ const options = {
   apis: [
     path.join(__dirname, '../app.js'),
     path.join(__dirname, '../auth/*.js'),
-    path.join(__dirname, '../admin/*.js'),
     path.join(__dirname, '../patentFilings/*.js'),
     path.join(__dirname, '../nonPatentFilings/*.js'),
   ],
