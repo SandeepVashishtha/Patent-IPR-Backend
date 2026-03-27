@@ -38,7 +38,7 @@ const normalizeNumber = (value, fallback) => {
 const listAdminFilingsQuerySchema = z.object({
   page: z.preprocess((value) => normalizeNumber(value, 0), z.number().int().min(0)).default(0),
   size: z.preprocess((value) => normalizeNumber(value, 10), z.number().int().min(1).max(100)).default(10),
-  status: z.enum(LIST_STATUSES).optional(),
+  status: z.preprocess(emptyToUndefined, z.enum(LIST_STATUSES)).optional(),
   type: z.preprocess(emptyToUndefined, z.enum(FILING_TYPES)).optional(),
   unassigned: z.preprocess(normalizeBoolean, z.boolean()).optional().default(false),
 });
