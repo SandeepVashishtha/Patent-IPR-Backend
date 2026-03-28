@@ -14,6 +14,11 @@ const options = {
       { name: 'Patent Filings', description: 'Patent filing lifecycle endpoints' },
       { name: 'Non-Patent Filings', description: 'Trademark, copyright and design filing endpoints' },
       { name: 'Files', description: 'File upload and presign endpoints' },
+      { name: 'Admin - Dashboard', description: 'Admin dashboard statistics' },
+      { name: 'Admin - Users', description: 'Admin user management (list, create, update role, delete)' },
+      { name: 'Admin - Patent Filings', description: 'Admin patent filing management (status, agent assignment, estimation)' },
+      { name: 'Admin - Non-Patent Filings', description: 'Admin non-patent filing management (status, agent assignment)' },
+      { name: 'Admin - Agents', description: 'Agent workload and management' },
       { name: 'System', description: 'System and health endpoints' },
     ],
     servers: [
@@ -83,6 +88,7 @@ const options = {
     path.join(__dirname, '../auth/*.js'),
     path.join(__dirname, '../patentFilings/*.js'),
     path.join(__dirname, '../nonPatentFilings/*.js'),
+    path.join(__dirname, '../admin/*.js'),
   ],
 };
 

@@ -161,6 +161,33 @@ const migrate = async () => {
       END $$;
     `);
 
+    // Add admin_note column to both filing tables (idempotent)
+    await db.query(`
+      ALTER TABLE patent_filings
+      ADD COLUMN IF NOT EXISTS admin_note TEXT;
+    `);
+
+    await db.query(`
+      ALTER TABLE non_patent_filings
+      ADD COLUMN IF NOT EXISTS admin_note TEXT;
+    `);
+
+    // Add IN_REVIEW to the filing_status enum if not already present
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_enum
+          WHERE enumlabel = 'IN_REVIEW'
+            AND enumtypid = (
+              SELECT oid FROM pg_type WHERE typname = 'filing_status'
+            )
+        ) THEN
+          ALTER TYPE filing_status ADD VALUE 'IN_REVIEW';
+        END IF;
+      END $$;
+    `);
+
     console.log('Migration completed successfully.');
   } catch (error) {
     console.error('Migration failed:', error.message);
