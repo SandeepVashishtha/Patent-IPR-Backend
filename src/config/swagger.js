@@ -19,6 +19,10 @@ const options = {
       { name: 'Admin - Patent Filings', description: 'Admin patent filing management (status, agent assignment, estimation)' },
       { name: 'Admin - Non-Patent Filings', description: 'Admin non-patent filing management (status, agent assignment)' },
       { name: 'Admin - Agents', description: 'Agent workload and management' },
+      { name: 'Agent - Dashboard', description: 'Agent dashboard and summary statistics' },
+      { name: 'Agent - Profile', description: 'Agent profile endpoints' },
+      { name: 'Agent - Patent Filings', description: 'Agent view and status management of assigned patent filings' },
+      { name: 'Agent - Non-Patent Filings', description: 'Agent view and status management of assigned non-patent filings' },
       { name: 'System', description: 'System and health endpoints' },
     ],
     servers: [
@@ -89,6 +93,7 @@ const options = {
     path.join(__dirname, '../patentFilings/*.js'),
     path.join(__dirname, '../nonPatentFilings/*.js'),
     path.join(__dirname, '../admin/*.js'),
+    path.join(__dirname, '../agent/*.js'),
   ],
 };
 
