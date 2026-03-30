@@ -571,6 +571,43 @@ router.patch('/non-patent-filings/:id/status', adminController.updateNonPatentFi
  */
 router.patch('/non-patent-filings/:id/assign-agent', adminController.assignAgentToNonPatent);
 
+/**
+ * @swagger
+ * /api/admin/non-patent-filings/{id}/estimation:
+ *   patch:
+ *     summary: Set cost estimation for a non-patent filing
+ *     tags: [Admin - Non-Patent Filings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [estimation]
+ *             properties:
+ *               estimation:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Estimated cost in your currency
+ *     responses:
+ *       200:
+ *         description: Estimation set
+ *       400:
+ *         description: Invalid estimation value
+ *       404:
+ *         description: Filing not found
+ */
+router.patch('/non-patent-filings/:id/estimation', adminController.setNonPatentEstimation);
+
 // ─────────────────────────────────────────────────────────────
 // AGENT WORKLOAD
 // ─────────────────────────────────────────────────────────────
