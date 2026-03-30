@@ -523,6 +523,21 @@ const adminAssignAgentToNonPatent = async (filingId, agentId) => {
   return result.rows[0];
 };
 
+const adminSetNonPatentEstimation = async (id, estimation) => {
+  if (typeof estimation !== 'number' || estimation < 0) {
+    throw new ApiError(400, 'Estimation must be a non-negative number', null, 'BAD_REQUEST');
+  }
+  const check = await db.query(`SELECT id FROM non_patent_filings WHERE id = $1`, [id]);
+  if (check.rows.length === 0) {
+    throw new ApiError(404, 'Non-patent filing not found', null, 'NOT_FOUND');
+  }
+  const result = await db.query(
+    `UPDATE non_patent_filings SET estimation = $2, updated_at = NOW() WHERE id = $1 RETURNING *`,
+    [id, estimation]
+  );
+  return result.rows[0];
+};
+
 // ─────────────────────────────────────────────
 // Agent Workload
 // ─────────────────────────────────────────────
@@ -560,5 +575,6 @@ module.exports = {
   adminGetNonPatentFiling,
   adminUpdateNonPatentFilingStatus,
   adminAssignAgentToNonPatent,
+  adminSetNonPatentEstimation,
   getAgentWorkload,
 };

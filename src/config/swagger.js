@@ -23,6 +23,9 @@ const options = {
       { name: 'Agent - Profile', description: 'Agent profile endpoints' },
       { name: 'Agent - Patent Filings', description: 'Agent view and status management of assigned patent filings' },
       { name: 'Agent - Non-Patent Filings', description: 'Agent view and status management of assigned non-patent filings' },
+      { name: 'Client - Profile', description: 'Client profile management, password change, and forgot password' },
+      { name: 'Client - Patent Filings', description: 'Client view, delete, payment info, and agent details for patent filings' },
+      { name: 'Client - Non-Patent Filings', description: 'Client view, delete, payment info, and agent details for non-patent filings' },
       { name: 'System', description: 'System and health endpoints' },
     ],
     servers: [
@@ -94,6 +97,7 @@ const options = {
     path.join(__dirname, '../nonPatentFilings/*.js'),
     path.join(__dirname, '../admin/*.js'),
     path.join(__dirname, '../agent/*.js'),
+    path.join(__dirname, '../client/*.js'),
   ],
 };
 

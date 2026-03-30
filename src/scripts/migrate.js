@@ -172,6 +172,12 @@ const migrate = async () => {
       ADD COLUMN IF NOT EXISTS admin_note TEXT;
     `);
 
+    // Add estimation column to non_patent_filings (idempotent)
+    await db.query(`
+      ALTER TABLE non_patent_filings
+      ADD COLUMN IF NOT EXISTS estimation NUMERIC(18,2);
+    `);
+
     // Add IN_REVIEW to the filing_status enum if not already present
     await db.query(`
       DO $$

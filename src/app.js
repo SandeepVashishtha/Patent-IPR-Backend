@@ -10,6 +10,7 @@ const patentFilingRoutes = require('./patentFilings/patentFiling.routes');
 const nonPatentFilingRoutes = require('./nonPatentFilings/nonPatentFiling.routes');
 const adminRoutes = require('./admin/admin.routes');
 const agentRoutes = require('./agent/agent.routes');
+const clientRoutes = require('./client/client.routes');
 const { notFound, errorHandler } = require('./utils/errorHandler');
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api', patentFilingRoutes);
 app.use('/api', nonPatentFilingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/client', clientRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(notFound);

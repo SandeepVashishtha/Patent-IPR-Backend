@@ -97,6 +97,12 @@ const assignAgentToNonPatent = asyncHandler(async (req, res) => {
   res.status(200).json({ data });
 });
 
+const setNonPatentEstimation = asyncHandler(async (req, res) => {
+  const { estimation } = req.body;
+  const data = await adminService.adminSetNonPatentEstimation(req.params.id, estimation);
+  res.status(200).json({ data });
+});
+
 // ─────────────────────────────────────────────
 // Agent Workload
 // ─────────────────────────────────────────────
@@ -122,5 +128,6 @@ module.exports = {
   getNonPatentFiling,
   updateNonPatentFilingStatus,
   assignAgentToNonPatent,
+  setNonPatentEstimation,
   getAgentWorkload,
 };
